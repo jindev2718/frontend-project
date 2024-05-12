@@ -1,26 +1,4 @@
-import React, { Component, createRef, forwardRef, Fragment, memo, useEffect, useRef, useState } from 'react';
-import { Group, Layer, Line, Rect, Stage } from 'react-konva';
-import { observer } from 'mobx-react';
-import { getEnv, getRoot, isAlive } from 'mobx-state-tree';
 
-import ImageGrid from '../ImageGrid/ImageGrid';
-import ImageTransformer from '../ImageTransformer/ImageTransformer';
-import ObjectTag from '../../components/Tags/Object';
-import Tree from '../../core/Tree';
-import styles from './ImageView.module.scss';
-import { errorBuilder } from '../../core/DataValidator/ConfigValidator';
-import { chunks, findClosestParent } from '../../utils/utilities';
-import Konva from 'konva';
-import { LoadingOutlined } from '@ant-design/icons';
-import { Toolbar } from '../Toolbar/Toolbar';
-import { ImageViewProvider } from './ImageViewContext';
-import { Hotkey } from '../../core/Hotkey';
-import { useObserver } from 'mobx-react';
-import ResizeObserver from '../../utils/resize-observer';
-import { debounce } from '../../utils/debounce';
-import Constants from '../../core/Constants';
-import { fixRectToFit } from '../../utils/image';
-import { FF_DEV_1285, FF_DEV_1442, FF_DEV_3077, FF_DEV_4081, isFF } from '../../utils/feature-flags';
 
 Konva.showWarnings = false;
 
@@ -364,7 +342,7 @@ const Crosshair = memo(forwardRef(({ width, height }, ref) => {
 
   const [visible, setVisible] = useState(false);
   const strokeWidth = 1;
-  const dashStyle = [3, 3];
+
   let enableStrokeScale = true;
 
   if (isFF(FF_DEV_1285)) {
@@ -902,96 +880,7 @@ export default observer(
                     }}
                     style={item.imageTransform}
                   />
-                )
-                : null}
-            </div>
-            {/* @todo this is dirty hack; rewrite to proper async waiting for data to load */}
-            {item.stageWidth <= 1 ? (item.hasTools ? <div className={styles.loading}><LoadingOutlined /></div> : null) : (
-              <Stage
-                ref={ref => {
-                  item.setStageRef(ref);
-                }}
-                className={[styles['image-element'],
-                  ...imagePositionClassnames,
-                ].join(' ')}
-                width={item.canvasSize.width}
-                height={item.canvasSize.height}
-                scaleX={item.zoomScale}
-                scaleY={item.zoomScale}
-                x={item.zoomingPositionX}
-                y={item.zoomingPositionY}
-                offsetX={item.stageTranslate.x}
-                offsetY={item.stageTranslate.y}
-                rotation={item.rotation}
-                onClick={this.handleOnClick}
-                onMouseEnter={() => {
-                  if (this.crosshairRef.current) {
-                    this.crosshairRef.current.updateVisibility(true);
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (this.crosshairRef.current) {
-                    this.crosshairRef.current.updateVisibility(false);
-                  }
-                  const { width: stageWidth, height: stageHeight } = item.canvasSize;
-                  const { offsetX: mouseposX, offsetY: mouseposY } = e.evt;
-                  const newEvent = { ...e };
 
-                  if (mouseposX <= 0) {
-                    e.offsetX = 0;
-                  } else if (mouseposX >= stageWidth) {
-                    e.offsetX = stageWidth;
-                  }
-
-                  if (mouseposY <= 0) {
-                    e.offsetY = 0;
-                  } else if (mouseposY >= stageHeight) {
-                    e.offsetY = stageHeight;
-                  }
-                  this.handleMouseMove(newEvent);
-                }}
-                onDragMove={this.updateCrosshair}
-                onMouseDown={this.handleMouseDown}
-                onMouseMove={this.handleMouseMove}
-                onMouseUp={this.handleMouseUp}
-                onWheel={item.zoom ? this.handleZoom : () => {
-                }}
-              >
-                {/* Hack to keep stage in place when there's no regions */}
-                {regions.length === 0 && (
-                  <Layer>
-                    <Line points={[0, 0, 0, 1]} stroke="rgba(0,0,0,0)" />
-                  </Layer>
-                )}
-                {item.grid && item.sizeUpdated && <ImageGrid item={item} />}
-
-                {renderableRegions.map(([groupName, list]) => {
-                  const isBrush = groupName.match(/brush/i) !== null;
-                  const isSuggestion = groupName.match('suggested') !== null;
-
-                  return list.length > 0 ? (
-                    <Regions
-                      key={groupName}
-                      name={groupName}
-                      regions={list}
-                      useLayers={isBrush === false}
-                      suggestion={isSuggestion}
-                    />
-                  ) : <Fragment key={groupName} />;
-                })}
-                <Selection item={item} selectionArea={item.selectionArea} isPanning={this.state.isPanning} />
-                <DrawingRegion item={item} />
-
-                {item.crosshair && (
-                  <Crosshair
-                    ref={this.crosshairRef}
-                    width={isFF(FF_DEV_1285) ? item.stageWidth : item.stageComponentSize.width}
-                    height={isFF(FF_DEV_1285) ? item.stageHeight : item.stageComponentSize.height}
-                  />
-                )}
-              </Stage>
-            )}
-          </div>
           {this.renderTools()}
           {item.images.length > 1 && (
             <div className={styles.gallery}>
